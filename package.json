@@ -1,0 +1,44 @@
+{
+  "name": "certbot-namesilo-hook",
+  "version": "1.0.0",
+  "description": "Certbot Namesilo Hook for Node.JS",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "bin": {
+    "certbot-namesilo-hook": "lib/index.js"
+  },
+  "files": [
+    "lib/**/*"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node lib/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swittk/certbot-namesilo-hook.git"
+  },
+  "keywords": [
+    "certbot",
+    "namesilo",
+    "hook",
+    "node"
+  ],
+  "author": "Switt Kongdachalert",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/swittk/certbot-namesilo-hook/issues"
+  },
+  "homepage": "https://github.com/swittk/certbot-namesilo-hook#readme",
+  "dependencies": {
+    "node-fetch": "^2.6.1",
+    "tldts": "^5.7.33",
+    "xml2js": "^0.4.23"
+  },
+  "devDependencies": {
+    "@types/node": "^15.0.2",
+    "@types/node-fetch": "^2.5.10",
+    "@types/xml2js": "^0.4.8",
+    "typescript": "^4.2.4"
+  }
+}
