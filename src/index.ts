@@ -157,8 +157,16 @@ async function namesilo_add_dns_record(params: {
   const obj = parsed as Namesilo.APIResponseRootObject;
   const reply = obj.namesilo.reply[0] as Namesilo.AddDNSRecordReply;
   if (reply.detail[0] != 'success') {
-    console.error('Failed with code', reply.code, 'detail', reply.detail)
-    throw 'Failed';
+    if (reply.code[0] == '280') {
+      // 280 is the return code if the record already exists
+      // (the detail tag will say `could not add resource record to domain since it already exists (duplicate)`)
+      console.log('Record with this exact details already exists so namesilo did not add any extra records');
+      console.log('record_id is', reply.record_id);
+    }
+    else {
+      console.error('Failed with code', reply.code, 'detail', reply.detail)
+      throw 'Failed';
+    }
   }
   return reply.record_id[0];
 }
