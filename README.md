@@ -17,7 +17,6 @@ Node.JS, NPM
 ````
 certbot certonly --manual --email awesomeemail@wow.com \
 --agree-tos \
---manual-public-ip-logging-ok \
 --preferred-challenges=dns \
 --manual-auth-hook certbot-namesilo-hook \
 --manual-cleanup-hook certbot-namesilo-hook \
@@ -27,7 +26,6 @@ Or when renewing
 ````
 certbot renew --email awesomeemail@wow.com \
 --agree-tos \
---manual-public-ip-logging-ok \
 --preferred-challenges=dns \
 --manual-auth-hook certbot-namesilo-hook \
 --manual-cleanup-hook certbot-namesilo-hook \
