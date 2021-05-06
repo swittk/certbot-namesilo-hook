@@ -57,8 +57,26 @@ async function authHook(
   const startTime = Date.now();
   const thirty_minutes_in_ms = 30 * 60 * 1000;
   let didFindRecord = false;
-  console.log(`Waiting for DNS record to be updated (started at ${new Date()})\n\n`);
+  console.log(`Waiting for DNS record to be updated (started at ${new Date()})\n`);
   while (Date.now() - startTime < thirty_minutes_in_ms) {
+    console.log('Checking if public record is updated yet..')
+    try {
+      const records = await getPublicTXTRecord(txtRecordURL);
+      if (records.indexOf(validationStr) != -1) {
+        console.log(`Found DNS record of ${validationStr}`);
+        didFindRecord = true;
+        break;
+      }
+      logSameLine(`Checking if public record is updated yet.. Nope (${new Date()})\n`);
+    } catch (e) {
+      if(e.code == 'ENODATA') {
+        console.log('No data found yet');
+      }
+      else {
+        console.error('Error with checking of TXT record', e);
+      }
+    }
+
     let count = 0;
     let interval = setInterval(() => {
       count++;
@@ -68,14 +86,6 @@ async function authHook(
     }, 200);
     await waitPromise(3 * 60 * 1000); // Wait 3 minutes before reloading data again
     clearInterval(interval);
-    console.log('Checking if public record is updated yet..')
-    const records = await getPublicTXTRecord(txtRecordURL);
-    if (records.indexOf(validationStr) != -1) {
-      console.log(`Found DNS record of ${validationStr}`);
-      didFindRecord = true;
-      break;
-    }
-    logSameLine(`Checking if public record is updated yet.. Nope (${new Date()})\n`);
   }
   if (!didFindRecord) {
     console.log('Timeout after 30 minutes, no records found');
@@ -182,6 +192,7 @@ async function namesilo_list_records(params: {
   const obj = parsed as Namesilo.APIResponseRootObject;
   const reply = obj.namesilo.reply[0] as Namesilo.ListDNSRecordReply;
   if (reply.detail[0] != 'success') {
+    console.error('Failed with code', reply.code, 'detail', reply.detail);
     throw 'Failed';
   }
   return reply.resource_record.map((v) => {
