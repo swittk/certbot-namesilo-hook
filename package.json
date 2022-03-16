@@ -1,6 +1,6 @@
 {
   "name": "certbot-namesilo-hook",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "description": "Certbot Namesilo Hook for Node.JS",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
