@@ -162,6 +162,7 @@ async function namesilo_add_dns_record(params: {
   ttl?: number
 }) {
   const { key, domain, type = 'TXT', path, value = '', ttl = 7207 } = params;
+  // const postUrl = `https://www.namesilo.com/api/dnsAddRecord?version=1&type=xml&key=${key}&domain=${domain}&rrtype=${type}&rrhost=${path}&rrvalue=${value}&rrttl=7207`
   const postUrl = `https://www.namesilo.com/api/dnsAddRecord?version=1&type=xml&key=${key}&domain=${domain}&rrtype=${type}&rrhost=${path}&rrvalue=${value}&rrttl=${ttl}`
   const res = await fetch(postUrl);
   const textres = await res.text();
@@ -174,7 +175,7 @@ async function namesilo_add_dns_record(params: {
       // (the detail tag will say `could not add resource record to domain since it already exists (duplicate)`)
       console.log('Record with this exact details already exists so namesilo did not add any extra records');
       console.log('record_id is', reply.record_id);
-      console.log('got reply', reply);
+      console.log('got reply', obj);
     }
     else {
       console.error('Failed with code', reply.code, 'detail', reply.detail)
