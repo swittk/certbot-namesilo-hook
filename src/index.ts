@@ -65,6 +65,7 @@ async function authHook(
     console.log('found TXT Record of', foundTXTRecord);
     if (!foundTXTRecord) {
       console.log('could not find relevant existing TXT record; crashing');
+      console.log('Found records are', JSON.stringify(records));
       throw `No valid TXT record to update`;
     }
     foundTXTRecord.record_id
@@ -74,7 +75,7 @@ async function authHook(
       rrid: foundTXTRecord.record_id,
       path: acmeChallengePathStr,
       value: validationStr,
-      ttl: 10 // Set TTL to low number because otherwise it might be cached causing the script to fail.
+      ttl: 3600 // Set TTL to low number because otherwise it might be cached causing the script to fail.
     });
     if (!updated_id) throw `Failed to update record`;
     record_id = updated_id;
