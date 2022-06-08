@@ -48,7 +48,8 @@ async function authHook(
     type: 'TXT',
     path: acmeChallengePathStr,
     value: validationStr,
-    ttl: 10 // Set TTL to low number because otherwise it might be cached causing the script to fail.
+    // MUST NOT SET LOWER THAN 3600
+    ttl: 3600 // Set TTL to low number because otherwise it might be cached causing the script to fail.
   });
   let record_id: string;
   if (!added_id) {
@@ -192,6 +193,7 @@ async function namesilo_add_dns_record(params: {
   type?: Namesilo.DNSRecordTypes,
   path: string,
   value?: string,
+  /** Value "must be numeric, less than 2592001, and greater than or equal to 3600" (according to error code from NameSilo) */
   ttl?: number
 }) {
   const { key, domain, type = 'TXT', path, value = '', ttl = 7207 } = params;
