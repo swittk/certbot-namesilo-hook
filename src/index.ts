@@ -68,8 +68,8 @@ async function authHook(
         break;
       }
       logSameLine(`Checking if public record is updated yet.. Nope (${new Date()})\n`);
-    } catch (e) {
-      if(e.code == 'ENODATA') {
+    } catch (e: any) {
+      if (e.code == 'ENODATA') {
         console.log('No data found yet');
       }
       else {
@@ -172,6 +172,7 @@ async function namesilo_add_dns_record(params: {
       // (the detail tag will say `could not add resource record to domain since it already exists (duplicate)`)
       console.log('Record with this exact details already exists so namesilo did not add any extra records');
       console.log('record_id is', reply.record_id);
+      console.log('got reply', reply);
     }
     else {
       console.error('Failed with code', reply.code, 'detail', reply.detail)
