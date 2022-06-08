@@ -42,7 +42,7 @@ async function authHook(
     acmeChallengePathStr = acmeChallengePathStr + `.${subdomain}`
   }
 
-  const record_id = await namesilo_add_dns_record({
+  const added_id = await namesilo_add_dns_record({
     key: nameSilo_key,
     domain: domain,
     type: 'TXT',
@@ -50,6 +50,39 @@ async function authHook(
     value: validationStr,
     ttl: 10 // Set TTL to low number because otherwise it might be cached causing the script to fail.
   });
+  let record_id: string;
+  if (!added_id) {
+    console.log('did not add record, listing existing records and trying again with update');
+    console.log('this could occur due to cleanup hook failing last time...');
+    const records = await namesilo_list_records({ key: nameSilo_key, domain });
+    const foundTXTRecord = records.find((v) => {
+      return (
+        v.host.startsWith('_acme-challenge')
+        || v.type == 'TXT'
+      );
+    })
+    console.log('found TXT Record of', foundTXTRecord);
+    if (!foundTXTRecord) {
+      console.log('could not find relevant existing TXT record; crashing');
+      throw `No valid TXT record to update`;
+    }
+    foundTXTRecord.record_id
+    const updated_id = await namesilo_update_record({
+      key: nameSilo_key,
+      domain: domain,
+      rrid: foundTXTRecord.record_id,
+      path: acmeChallengePathStr,
+      value: validationStr,
+      ttl: 10 // Set TTL to low number because otherwise it might be cached causing the script to fail.
+    });
+    if (!updated_id) throw `Failed to update record`;
+    record_id = updated_id;
+  }
+  else {
+    // Nothing
+    record_id = added_id;
+  }
+
   console.log(`Did add DNS record with record_id: ${record_id}, data of ${validationStr}`)
   // Append to record_ids file for deletion later.
   await fs.appendFile(`${cache_directory}/record_ids`, `${record_id}\n`);
@@ -176,6 +209,7 @@ async function namesilo_add_dns_record(params: {
       console.log('Record with this exact details already exists so namesilo did not add any extra records');
       console.log('record_id is', reply.record_id);
       console.log('got reply', JSON.stringify(obj.namesilo.reply));
+      return undefined;
     }
     else {
       console.error('Failed with code', reply.code, 'detail', reply.detail)
@@ -229,6 +263,49 @@ async function namesilo_delete_record(params: {
     throw 'Failed';
   }
   return;
+}
+
+/**
+ * Namesilo update record 
+ * https://www.namesilo.com/api-reference#dns/dns-update-record
+ * @param params 
+ * @returns 
+ */
+async function namesilo_update_record(params: {
+  key: string,
+  domain: string,
+  /** The unique ID of the resource record. You can get this value using dnsListRecords. */
+  rrid: string,
+  path: string,
+  value?: string,
+  ttl?: number
+}) {
+  const { key, domain, rrid, path, value = '', ttl = 7207 } = params;
+  // const postUrl = `https://www.namesilo.com/api/dnsAddRecord?version=1&type=xml&key=${key}&domain=${domain}&rrtype=${type}&rrhost=${path}&rrvalue=${value}&rrttl=7207`
+  const postUrl = `https://www.namesilo.com/api/dnsUpdateRecord?version=1&type=xml&key=${key}&domain=${domain}&rrid=${rrid}&rrhost=${path}&rrvalue=${value}&rrttl=${ttl}`
+  const res = await fetch(postUrl);
+  const textres = await res.text();
+  const parsed = await xml2js.parseStringPromise(textres);
+  const obj = parsed as Namesilo.APIResponseRootObject;
+  const reply = obj.namesilo.reply[0] as Namesilo.UpdateDNSRecordReply;
+  if (reply.detail[0] != 'success') {
+    if (reply.code[0] == '280') {
+      // 280 is the return code if the record already exists
+      // (the detail tag will say `could not add resource record to domain since it already exists (duplicate)`)
+      console.log('Record with this exact details already exists so namesilo did not add any extra records');
+      console.log('record_id is', reply.record_id);
+      console.log('got reply', JSON.stringify(obj.namesilo.reply));
+      return undefined;
+    }
+    else {
+      console.error('Failed with code', reply.code, 'detail', reply.detail)
+      console.log('got reply', JSON.stringify(obj.namesilo.reply));
+      throw 'Failed';
+    }
+  }
+  // the record_id is updated when successful according to NameSilo docs
+  // `The new unique ID for the resource record that was updated. Any successful updates will result in a new record_id`
+  return reply.record_id[0];
 }
 
 

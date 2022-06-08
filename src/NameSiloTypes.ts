@@ -33,6 +33,9 @@ export declare module Namesilo {
   export type AddDNSRecordReply = Reply & {
     record_id: string[];
   }
+  export type UpdateDNSRecordReply = Reply & {
+    record_id: string[];
+  }
 
   export interface Namesilo {
     request: ResponseRequestField[];
