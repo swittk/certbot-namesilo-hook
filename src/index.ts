@@ -47,7 +47,8 @@ async function authHook(
     domain: domain,
     type: 'TXT',
     path: acmeChallengePathStr,
-    value: validationStr
+    value: validationStr,
+    ttl: 1 // Set TTL to 1 because otherwise it might be cached causing the script to fail.
   });
   console.log(`Did add DNS record with record_id: ${record_id}, data of ${validationStr}`)
   // Append to record_ids file for deletion later.
@@ -69,7 +70,7 @@ async function authHook(
       }
       logSameLine(`Checking if public record is updated yet.. Nope (${new Date()})\n`);
     } catch (e: any) {
-      if (e.code == 'ENODATA') {
+      if (e?.code == 'ENODATA') {
         console.log('No data found yet');
       }
       else {
@@ -157,10 +158,11 @@ async function namesilo_add_dns_record(params: {
   domain: string,
   type?: Namesilo.DNSRecordTypes,
   path: string,
-  value?: string
+  value?: string,
+  ttl?: number
 }) {
-  const { key, domain, type = 'TXT', path, value = '' } = params;
-  const postUrl = `https://www.namesilo.com/api/dnsAddRecord?version=1&type=xml&key=${key}&domain=${domain}&rrtype=${type}&rrhost=${path}&rrvalue=${value}&rrttl=7207`
+  const { key, domain, type = 'TXT', path, value = '', ttl = 7207 } = params;
+  const postUrl = `https://www.namesilo.com/api/dnsAddRecord?version=1&type=xml&key=${key}&domain=${domain}&rrtype=${type}&rrhost=${path}&rrvalue=${value}&rrttl=${ttl}`
   const res = await fetch(postUrl);
   const textres = await res.text();
   const parsed = await xml2js.parseStringPromise(textres);
