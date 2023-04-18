@@ -10,7 +10,7 @@ Node.JS, NPM
 
 1. ````npm install -g certbot-namesilo-hook````
 2. Generate NameSilo API key (at https://www.namesilo.com/account/api-manager)
-3. In your terminal (or in your terminal profile (e.g. .bash_profile/.zprofile) ) do ````export NAMESILO_API="<your_api_key>"```` (add environment variable)
+3. In your terminal (or in your terminal profile (e.g. .bash_profile/.zprofile) ) do ````export NAMESILO_KEY="<your_api_key>"```` (add environment variable)
 4. When you run certbot, add the options for ````--manual-auth-hook```` and ````--manual-cleanup-hook```` to be certbot-namesilo-hook
 
 #### Example Usage
