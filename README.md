@@ -23,13 +23,13 @@ certbot certonly --manual --email awesomeemail@wow.com \
 -d *.awesomewebsite.com -d awesomewebsite.com
 ````
 Or when renewing
-````
+````shell
 certbot renew --email awesomeemail@wow.com \
 --agree-tos \
 --preferred-challenges=dns \
 --manual-auth-hook certbot-namesilo-hook \
 --manual-cleanup-hook certbot-namesilo-hook \
--d *.awesomewebsite.com -d awesomewebsite.com
+-d '*.awesomewebsite.com' -d awesomewebsite.com
 ````
 
 
