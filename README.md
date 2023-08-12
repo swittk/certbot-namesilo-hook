@@ -14,22 +14,22 @@ Node.JS, NPM
 4. When you run certbot, add the options for ````--manual-auth-hook```` and ````--manual-cleanup-hook```` to be certbot-namesilo-hook
 
 #### Example Usage
-````
+````shell
 certbot certonly --manual --email awesomeemail@wow.com \
 --agree-tos \
 --preferred-challenges=dns \
 --manual-auth-hook certbot-namesilo-hook \
 --manual-cleanup-hook certbot-namesilo-hook \
--d *.awesomewebsite.com -d awesomewebsite.com
+-d '*.awesomewebsite.com' -d awesomewebsite.com
 ````
 Or when renewing
-````
+````shell
 certbot renew --email awesomeemail@wow.com \
 --agree-tos \
 --preferred-challenges=dns \
 --manual-auth-hook certbot-namesilo-hook \
 --manual-cleanup-hook certbot-namesilo-hook \
--d *.awesomewebsite.com -d awesomewebsite.com
+-d '*.awesomewebsite.com' -d awesomewebsite.com
 ````
 
 
