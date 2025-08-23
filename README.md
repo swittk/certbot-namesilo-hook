@@ -31,22 +31,22 @@ Node.JS, NPM
     - use it as the options for `--manual-auth-hook` and `--manual-cleanup-hook` same as before
 
 #### Example Usage
-````
+````shell
 certbot certonly --manual --email awesomeemail@wow.com \
 --agree-tos \
 --preferred-challenges=dns \
 --manual-auth-hook certbot-namesilo-hook \
 --manual-cleanup-hook certbot-namesilo-hook \
--d *.awesomewebsite.com -d awesomewebsite.com
+-d '*.awesomewebsite.com' -d awesomewebsite.com
 ````
 Or when renewing
-````
+````shell
 certbot renew --email awesomeemail@wow.com \
 --agree-tos \
 --preferred-challenges=dns \
 --manual-auth-hook certbot-namesilo-hook \
 --manual-cleanup-hook certbot-namesilo-hook \
--d *.awesomewebsite.com -d awesomewebsite.com
+-d '*.awesomewebsite.com' -d awesomewebsite.com
 ````
 
 
