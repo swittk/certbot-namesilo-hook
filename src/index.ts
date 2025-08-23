@@ -95,7 +95,7 @@ async function authHook(
   let didFindRecord = false;
   console.log(`Waiting for DNS record to be updated (started at ${new Date()})\n`);
   while (Date.now() - startTime < thirty_minutes_in_ms) {
-    console.log('Checking if public record is updated yet..')
+    // console.log('Checking if public record is updated yet..')
     try {
       const records = await getPublicTXTRecord(txtRecordURL);
       if (records.indexOf(validationStr) != -1) {
@@ -105,7 +105,7 @@ async function authHook(
       }
       logSameLine(`Checking if public record is updated yet.. Nope (${new Date()})\n`);
     } catch (e: any) {
-      if (e?.code == 'ENODATA') {
+      if (e?.code == 'ENODATA' || e?.code == "ENOTFOUND") {
         console.log('No data found yet');
       }
       else {
@@ -113,15 +113,15 @@ async function authHook(
       }
     }
 
-    let count = 0;
-    let interval = setInterval(() => {
-      count++;
-      if (count >= loading_characters.length) { count = 0; }
-      let character = loading_characters[count];
-      logSameLine(`Waiting.. (recheck every 3 minutes) ${character}`);
-    }, 200);
+    // let count = 0;
+    // let interval = setInterval(() => {
+    //   count++;
+    //   if (count >= loading_characters.length) { count = 0; }
+    //   let character = loading_characters[count];
+    //   logSameLine(`Waiting.. (recheck every 3 minutes) ${character}`);
+    // }, 200);
     await waitPromise(3 * 60 * 1000); // Wait 3 minutes before reloading data again
-    clearInterval(interval);
+    // clearInterval(interval);
   }
   if (!didFindRecord) {
     console.log('Timeout after 30 minutes, no records found');
@@ -143,16 +143,16 @@ async function cleanupHook(nameSilo_key: string, certdomain: string, cache_direc
 }
 
 async function main() {
+  const args = parseArgs(process.argv);
   /** Our domain being authenticated */
-  const certdomain = process.env.CERTBOT_DOMAIN;
+  const certdomain = process.env.CERTBOT_DOMAIN ?? (args['certbot-domain'] as string | undefined);
   const validationStr = process.env.CERTBOT_VALIDATION;
   const remainingChallenges = process.env.CERTBOT_REMAINING_CHALLENGES;
   const allDomains = process.env.CERTBOT_ALL_DOMAINS;
-  const nameSilo_key = process.env.NAMESILO_KEY;
+  const nameSilo_key = process.env.NAMESILO_KEY ?? (args['namesilo-key'] as string | undefined);
   const auth_output = process.env.CERTBOT_AUTH_OUTPUT;
-
   if (!nameSilo_key) {
-    console.error(`No NAMESILO_KEY environment variable specified. Please perform export NAMESILO_KEY=your_key before calling this function.`);
+    console.error(`No NAMESILO_KEY environment variable or --namesilo-key cli argument specified. Please perform export NAMESILO_KEY=your_key before calling this function.`);
     throw new Error('!NAMESILO_KEY');
   }
   if (!certdomain) {
@@ -169,18 +169,19 @@ async function main() {
 
   if (process.argv.indexOf('cleanup') != -1 || auth_output) {
     if (auth_output) {
-      console.log(`Found auth_output of..`);
-      console.log('\x1b[36m%s\x1b[0m', auth_output);
+      // console.log(`Found auth_output of..`);
+      // console.log('\x1b[36m%s\x1b[0m', auth_output);
       console.log('\x1b[33m%s\x1b[0m', 'performing cleanup');
     }
     else {
       console.log('found cleanup argument; performing cleanup')
     }
-    cleanupHook(nameSilo_key, certdomain, cache_directory);
+    await cleanupHook(nameSilo_key, certdomain, cache_directory);
   }
   else {
-    authHook(nameSilo_key, certdomain, validationStr, remainingChallenges, allDomains, cache_directory);
+    await authHook(nameSilo_key, certdomain, validationStr, remainingChallenges, allDomains, cache_directory);
   }
+  process.exit();
 }
 
 
@@ -320,7 +321,7 @@ async function getPublicTXTRecord(address: string) {
     const result = await dns.lookup(serv, 4);
     return result.address;
   }));
-  console.log('dns server addresses', dnsAddresses);
+  // console.log('dns server addresses', dnsAddresses);
   resolver.setServers(dnsAddresses);
   const res = await resolver.resolveTxt(address);
   return Array.prototype.concat.apply([], res) as string[];
@@ -362,3 +363,195 @@ const loading_characters = ['⠟', '⠯', '⠷', '⠾', '⠽', '⠻'];
 
 
 main();
+
+
+
+type ParseConfig = {
+  aliases?: Record<string, string | string[]>;
+  booleans?: string[];  // keys that should be forced to boolean
+  strings?: string[];   // keys that should be forced to string
+  defaults?: Record<string, any>;
+};
+
+type ParsedArgs = {
+  _: string[];
+} & Record<string, any>;
+
+function parseArgs(argv: string[], config: ParseConfig = {}): ParsedArgs {
+  const {
+    aliases = {},
+    booleans = [],
+    strings = [],
+    defaults = {},
+  } = config;
+
+  // Normalize aliases -> map each alias to its canonical key
+  const canon: Record<string, string> = {};
+  for (const [k, v] of Object.entries(aliases)) {
+    const list = Array.isArray(v) ? v : [v];
+    for (const a of list) canon[a] = k;
+    canon[k] = k; // map canonical to itself
+  }
+
+  const isBoolean = new Set(booleans.map(k => canon[k] ?? k));
+  const isString = new Set(strings.map(k => canon[k] ?? k));
+
+  const out: ParsedArgs = { _: [] };
+
+  // seed defaults (respect aliases)
+  for (const [k, v] of Object.entries(defaults)) {
+    setValue(out, canon[k] ?? k, v);
+  }
+
+  // helpers
+  function keyOf(raw: string): string {
+    const k = raw.replace(/^-+/, '');
+    return canon[k] ?? k;
+  }
+
+  function castValue(key: string, val: string | boolean): any {
+    if (typeof val === 'boolean') return val;
+    if (isString.has(key)) return val;
+    if (isBoolean.has(key)) return val.length ? val.toLowerCase() !== 'false' : true;
+
+    const lower = val.toLowerCase();
+    if (lower === 'true') return true;
+    if (lower === 'false') return false;
+
+    // number?
+    if (/^[+-]?(?:\d+|\d*\.\d+)(?:e[+-]?\d+)?$/i.test(val)) {
+      const n = Number(val);
+      if (!Number.isNaN(n)) return n;
+    }
+    return val;
+  }
+
+  function setValue(obj: Record<string, any>, key: string, val: any) {
+    if (key in obj) {
+      const prev = obj[key];
+      if (Array.isArray(prev)) obj[key] = prev.concat(val);
+      else obj[key] = [prev, val];
+    } else {
+      obj[key] = val;
+    }
+  }
+
+  // actual parse (skip node + script)
+  const tokens = argv.slice(2);
+  let i = 0;
+
+  while (i < tokens.length) {
+    const t = tokens[i];
+
+    if (t === '--') {
+      // everything after "--" is positional
+      out._.push(...tokens.slice(i + 1));
+      break;
+    }
+
+    if (!t.startsWith('-')) {
+      out._.push(t);
+      i++;
+      continue;
+    }
+
+    // --no-flag
+    if (t.startsWith('--no-') && t.length > 5) {
+      const k = keyOf(t.slice(5));
+      setValue(out, k, false);
+      i++;
+      continue;
+    }
+
+    // --key=value
+    const eq = t.indexOf('=');
+    if (t.startsWith('--') && eq > 2) {
+      const k = keyOf(t.slice(2, eq));
+      const raw = t.slice(eq + 1);
+      setValue(out, k, castValue(k, raw));
+      i++;
+      continue;
+    }
+
+    // --key (maybe followed by value)
+    if (t.startsWith('--')) {
+      const k = keyOf(t.slice(2));
+      const next = tokens[i + 1];
+      if (
+        next !== undefined &&
+        !next.startsWith('-') &&
+        !isBoolean.has(k)
+      ) {
+        setValue(out, k, castValue(k, next));
+        i += 2;
+      } else {
+        setValue(out, k, castValue(k, 'true'));
+        i++;
+      }
+      continue;
+    }
+
+    // short flags: -abc or -k=value or -k value
+    if (t.startsWith('-') && t.length > 1) {
+      const chunk = t.slice(1);
+
+      // -k=value
+      const idx = chunk.indexOf('=');
+      if (idx > 0) {
+        const k = keyOf(chunk.slice(0, idx));
+        const raw = chunk.slice(idx + 1);
+        setValue(out, k, castValue(k, raw));
+        i++;
+        continue;
+      }
+
+      // -abc (booleans), last one may take a value: -k 123
+      if (chunk.length > 1) {
+        for (let j = 0; j < chunk.length; j++) {
+          const k = keyOf(chunk[j]);
+          // only the last short key can bind a value
+          if (j === chunk.length - 1) {
+            const next = tokens[i + 1];
+            if (
+              next !== undefined &&
+              !next.startsWith('-') &&
+              !isBoolean.has(k)
+            ) {
+              setValue(out, k, castValue(k, next));
+              i += 2;
+              break;
+            } else {
+              setValue(out, k, true);
+              i++;
+              break;
+            }
+          } else {
+            setValue(out, k, true);
+          }
+        }
+      } else {
+        // single -k possibly followed by value
+        const k = keyOf(chunk);
+        const next = tokens[i + 1];
+        if (
+          next !== undefined &&
+          !next.startsWith('-') &&
+          !isBoolean.has(k)
+        ) {
+          setValue(out, k, castValue(k, next));
+          i += 2;
+        } else {
+          setValue(out, k, true);
+          i++;
+        }
+      }
+      continue;
+    }
+
+    // fallback to positional if we somehow got here
+    out._.push(t);
+    i++;
+  }
+
+  return out;
+}
